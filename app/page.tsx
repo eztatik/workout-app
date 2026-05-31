@@ -280,17 +280,50 @@ export default function WorkoutTracker() {
       return {};
     },
   );
+  const [isLoading, setIsLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "error">(
+    "synced",
+  );
 
+  // Load data from database on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    async function loadFromDb() {
+      try {
+        const response = await fetch("/api/workouts");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.weeks) {
+            setWeeks(data.weeks);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data.weeks));
+          }
+          if (data.dayFinished) {
+            setDayFinished(data.dayFinished);
+            localStorage.setItem(
+              STORAGE_KEY + "-finished",
+              JSON.stringify(data.dayFinished),
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load from database:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadFromDb();
+  }, []);
+
+  // Save to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined" && !isLoading) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(weeks));
       } catch {}
     }
-  }, [weeks]);
+  }, [weeks, isLoading]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !isLoading) {
       try {
         localStorage.setItem(
           STORAGE_KEY + "-finished",
@@ -298,7 +331,33 @@ export default function WorkoutTracker() {
         );
       } catch {}
     }
-  }, [dayFinished]);
+  }, [dayFinished, isLoading]);
+
+  // Sync to database (debounced)
+  useEffect(() => {
+    if (isLoading) return;
+
+    const timeoutId = setTimeout(async () => {
+      setSyncStatus("syncing");
+      try {
+        const response = await fetch("/api/workouts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ weeks, dayFinished }),
+        });
+        if (response.ok) {
+          setSyncStatus("synced");
+        } else {
+          setSyncStatus("error");
+        }
+      } catch (error) {
+        console.error("Failed to sync to database:", error);
+        setSyncStatus("error");
+      }
+    }, 2000); // Debounce for 2 seconds
+
+    return () => clearTimeout(timeoutId);
+  }, [weeks, dayFinished, isLoading]);
 
   // When a day is finished, push its actual logged data into all future weeks for that day
   function finishDay() {
@@ -591,6 +650,19 @@ export default function WorkoutTracker() {
           </h1>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Sync Status */}
+          {syncStatus === "syncing" && (
+            <span style={{ fontSize: 10, color: "#7c6fcd" }}>
+              💾 Syncing...
+            </span>
+          )}
+          {syncStatus === "synced" && (
+            <span style={{ fontSize: 10, color: "#4ade80" }}>✓ Saved</span>
+          )}
+          {syncStatus === "error" && (
+            <span style={{ fontSize: 10, color: "#f87171" }}>⚠ Offline</span>
+          )}
+
           {confirmReset ? (
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#f87171" }}>Sure?</span>
