@@ -310,7 +310,7 @@ export default function WorkoutTracker() {
     const currentDayData = weeks[activeWeek].days[activeDay];
 
     // Update all future weeks for this same day index using progressive overload from THIS week's data
-    setWeeks((prev) =>
+    setWeeks((prev: any) =>
       prev.map((week: any, wi: number) => {
         if (wi <= activeWeek) return week; // don't touch current or past weeks
         const weekOffset = wi - activeWeek;
