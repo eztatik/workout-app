@@ -606,11 +606,45 @@ export default function WorkoutTracker() {
     setConfirmReset(false);
   }
 
+  function copyLastWeekToNewPlan() {
+    const lastWeek = weeks[weeks.length - 1];
+    // Strip logged state from the last week's days to use as a clean Week 1 baseline
+    const newBaseDays = lastWeek.days.map((day: any) => ({
+      ...day,
+      workouts: day.workouts.map((w: any) => ({
+        ...w,
+        tip: "",
+        aiGenerated: false,
+        sets: w.sets.map((s: any) => ({
+          ...s,
+          id: Math.random(),
+          logged: false,
+        })),
+      })),
+    }));
+
+    const newWeeks = Array.from({ length: TOTAL_WEEKS }, (_, wi) => ({
+      label: `Week ${wi + 1}`,
+      aiGenerated: wi > 0,
+      days: newBaseDays.map((day: any) =>
+        wi === 0 ? { ...day } : progressDay(day, wi),
+      ),
+    }));
+
+    setWeeks(newWeeks);
+    setDayFinished({});
+    setActiveWeek(0);
+    setActiveDay(0);
+  }
+
   const currentWeek = weeks[activeWeek];
   const currentDay = currentWeek?.days[activeDay];
-  const isBaseline = activeWeek === 0;
   const dayKey = `${activeWeek}-${activeDay}`;
   const isDayDone = !!dayFinished[dayKey];
+  const isLastWeek = activeWeek === weeks.length - 1;
+  const isLastWeekAllDone =
+    isLastWeek &&
+    DAYS.every((_, di) => dayFinished[`${activeWeek}-${di}`]);
 
   return (
     <div
@@ -1272,6 +1306,34 @@ export default function WorkoutTracker() {
                   >
                     VIEW WEEK {activeWeek + 2} {DAYS[activeDay].toUpperCase()} →
                   </button>
+                )}
+                {isLastWeekAllDone && (
+                  <div style={{ marginTop: 16, borderTop: "1px solid #2a2a44", paddingTop: 16 }}>
+                    <div style={{ fontSize: 11, color: "#a78bfa", marginBottom: 8, letterSpacing: 1 }}>
+                      🎉 ALL {TOTAL_WEEKS} WEEKS COMPLETE!
+                    </div>
+                    <button
+                      onClick={copyLastWeekToNewPlan}
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        background: "linear-gradient(135deg, #2e1065, #3b0764)",
+                        border: "1px solid #7c3aed",
+                        borderRadius: 10,
+                        color: "#c4b5fd",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        letterSpacing: 2,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      ↻ COPY WEEK {TOTAL_WEEKS} → NEW PLAN
+                    </button>
+                    <div style={{ fontSize: 10, color: "#555570", marginTop: 6 }}>
+                      Starts a fresh {TOTAL_WEEKS}-week plan using Week {TOTAL_WEEKS}'s workouts as the new baseline
+                    </div>
+                  </div>
                 )}
               </div>
             )}
