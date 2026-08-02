@@ -355,15 +355,23 @@ export default function ProgramsPage({
     const days = draft.days || [];
     const exists = days.find(d => d.name === dayName);
     if (exists) {
-      setDraft(p => ({ ...p, days: days.filter(d => d.name !== dayName) }));
-      setActiveDayIdx(0);
-    } else {
-      const ordered = DAY_OPTIONS.filter(d => d === dayName || days.some(x => x.name === d));
-      const updated = ordered.map(d =>
-        d === dayName ? { name: d, workouts: [] } : days.find(x => x.name === d)!
-      );
+      // Remove — keep remaining days in their current order
+      const updated = days.filter(d => d.name !== dayName);
       setDraft(p => ({ ...p, days: updated }));
+      setActiveDayIdx(i => Math.min(i, Math.max(0, updated.length - 1)));
+    } else {
+      // Append to end — user decides order via ↑↓ buttons
+      setDraft(p => ({ ...p, days: [...(p.days || []), { name: dayName, workouts: [] }] }));
     }
+  }
+
+  function moveDay(index: number, dir: -1 | 1) {
+    const days = [...(draft.days || [])];
+    const target = index + dir;
+    if (target < 0 || target >= days.length) return;
+    [days[index], days[target]] = [days[target], days[index]];
+    setDraft(p => ({ ...p, days }));
+    setActiveDayIdx(target);
   }
 
   function addExerciseToDay(ex: ProgramExercise) {
@@ -457,7 +465,8 @@ export default function ProgramsPage({
 
             <div style={{ marginBottom: 16 }}>
               <div style={fieldLabel}>TRAINING DAYS</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {/* Day picker chips */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                 {DAY_OPTIONS.map(day => {
                   const selected = (draft.days || []).some(d => d.name === day);
                   return (
@@ -471,6 +480,49 @@ export default function ProgramsPage({
                   );
                 })}
               </div>
+              {/* Ordered list with ↑↓ controls */}
+              {(draft.days || []).length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ fontSize: 9, letterSpacing: 2, color: "#555", marginBottom: 2 }}>
+                    DRAG ORDER — USE ARROWS TO REORDER
+                  </div>
+                  {(draft.days || []).map((d, i) => (
+                    <div key={d.name} style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      background: "#1a1414", border: "1px solid #2a1414",
+                      borderRadius: 8, padding: "7px 10px",
+                    }}>
+                      <span style={{ fontSize: 10, color: "#555", fontWeight: 700, width: 16, textAlign: "center" }}>
+                        {i + 1}
+                      </span>
+                      <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "#fca5a5" }}>
+                        {d.name}
+                      </span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <button
+                          onClick={() => moveDay(i, -1)}
+                          disabled={i === 0}
+                          style={{
+                            background: "none", border: "none", cursor: i === 0 ? "default" : "pointer",
+                            color: i === 0 ? "#2a1414" : "#9f1239", fontSize: 11, padding: "0 4px",
+                            lineHeight: 1, fontFamily: "inherit",
+                          }}
+                        >▲</button>
+                        <button
+                          onClick={() => moveDay(i, 1)}
+                          disabled={i === (draft.days || []).length - 1}
+                          style={{
+                            background: "none", border: "none",
+                            cursor: i === (draft.days || []).length - 1 ? "default" : "pointer",
+                            color: i === (draft.days || []).length - 1 ? "#2a1414" : "#9f1239",
+                            fontSize: 11, padding: "0 4px", lineHeight: 1, fontFamily: "inherit",
+                          }}
+                        >▼</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {(draft.days || []).length > 0 && (
