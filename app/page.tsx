@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import ProgramsPage, { type Program, type ArchivedProgram } from "./ProgramsPanel";
 
 const STORAGE_KEY = "workout-tracker-data-v9";
+const PROGRAMS_KEY = "workout-tracker-programs-v1";
+const ACTIVE_PROGRAM_KEY = "workout-tracker-active-program-v1";
+const ARCHIVED_PROGRAMS_KEY = "workout-tracker-archived-programs-v1";
 const DAYS = ["Saturday", "Sunday", "Monday", "Wednesday"];
 const DAY_SHORT = ["SAT", "SUN", "MON", "WED"];
 const TOTAL_WEEKS = 7;
@@ -353,6 +357,34 @@ export default function WorkoutTracker() {
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "error">(
     "synced",
   );
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [programs, setPrograms] = useState<Program[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(PROGRAMS_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+  const [activeProgram, setActiveProgram] = useState<Program | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(ACTIVE_PROGRAM_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return null;
+  });
+  const [archivedPrograms, setArchivedPrograms] = useState<ArchivedProgram[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(ARCHIVED_PROGRAMS_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
 
   // ── Rest timer ──────────────────────────────────────────────────────────────
   const [restSeconds, setRestSeconds] = useState(0);
@@ -427,6 +459,18 @@ export default function WorkoutTracker() {
               JSON.stringify(data.dayFinished),
             );
           }
+          if (Array.isArray(data.programs)) {
+            setPrograms(data.programs);
+            localStorage.setItem(PROGRAMS_KEY, JSON.stringify(data.programs));
+          }
+          if (data.activeProgram !== undefined) {
+            setActiveProgram(data.activeProgram);
+            localStorage.setItem(ACTIVE_PROGRAM_KEY, JSON.stringify(data.activeProgram));
+          }
+          if (Array.isArray(data.archivedPrograms)) {
+            setArchivedPrograms(data.archivedPrograms);
+            localStorage.setItem(ARCHIVED_PROGRAMS_KEY, JSON.stringify(data.archivedPrograms));
+          }
         }
       } catch (error) {
         console.error("Failed to load from database:", error);
@@ -457,6 +501,24 @@ export default function WorkoutTracker() {
   }, [dayFinished, isLoading]);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && !isLoading) {
+      try { localStorage.setItem(PROGRAMS_KEY, JSON.stringify(programs)); } catch {}
+    }
+  }, [programs, isLoading]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !isLoading) {
+      try { localStorage.setItem(ACTIVE_PROGRAM_KEY, JSON.stringify(activeProgram)); } catch {}
+    }
+  }, [activeProgram, isLoading]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !isLoading) {
+      try { localStorage.setItem(ARCHIVED_PROGRAMS_KEY, JSON.stringify(archivedPrograms)); } catch {}
+    }
+  }, [archivedPrograms, isLoading]);
+
+  useEffect(() => {
     if (isLoading) return;
     const timeoutId = setTimeout(async () => {
       setSyncStatus("syncing");
@@ -464,7 +526,7 @@ export default function WorkoutTracker() {
         const response = await fetch("/api/workouts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ weeks, dayFinished }),
+          body: JSON.stringify({ weeks, dayFinished, programs, activeProgram, archivedPrograms }),
         });
         setSyncStatus(response.ok ? "synced" : "error");
       } catch {
@@ -472,7 +534,7 @@ export default function WorkoutTracker() {
       }
     }, 2000);
     return () => clearTimeout(timeoutId);
-  }, [weeks, dayFinished, isLoading]);
+  }, [weeks, dayFinished, programs, activeProgram, archivedPrograms, isLoading]);
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
@@ -799,6 +861,97 @@ export default function WorkoutTracker() {
     workoutStartRef.current = null;
   }
 
+  function saveProgram(program: Program) {
+    setPrograms(prev => {
+      const exists = prev.find(p => p.id === program.id);
+      return exists
+        ? prev.map(p => p.id === program.id ? program : p)
+        : [...prev, program];
+    });
+  }
+
+  function deleteProgram(id: string) {
+    setPrograms(prev => prev.filter(p => p.id !== id));
+  }
+
+  function buildProgramWeeks(program: Program) {
+    function buildDay(pd: typeof program.days[0]) {
+      return {
+        name: pd.name,
+        workouts: pd.workouts.map((w: any) => ({
+          ...w,
+          tip: "",
+          aiGenerated: false,
+          sets: w.sets.map((s: any) => ({ ...s, id: Math.random(), logged: false })),
+        })),
+      };
+    }
+    const baseDays = program.days.map(buildDay);
+    return Array.from({ length: program.weeks }, (_, wi) => ({
+      label: `Week ${wi + 1}`,
+      aiGenerated: wi > 0,
+      days: baseDays.map(day => wi === 0 ? { ...day } : progressDay(day, wi)),
+    }));
+  }
+
+  function activateProgram(program: Program) {
+    setActiveProgram(program);
+    setWeeks(buildProgramWeeks(program));
+    setDayFinished({});
+    setActiveWeek(0);
+    setActiveDay(0);
+    setWorkoutSummary(null);
+    workoutStartRef.current = null;
+    setDrawerOpen(false);
+  }
+
+  function endProgram() {
+    if (!activeProgram) return;
+    const weeksCompleted = Object.keys(dayFinished).reduce((max, key) => {
+      const wi = parseInt(key.split("-")[0], 10);
+      return isNaN(wi) ? max : Math.max(max, wi + 1);
+    }, 0);
+    const archived: ArchivedProgram = {
+      ...activeProgram,
+      archivedAt: Date.now(),
+      weeksCompleted,
+    };
+    setArchivedPrograms(prev => [...prev, archived]);
+    setActiveProgram(null);
+    // Keep the current tracker data as-is — don't wipe the user's progress
+    setDrawerOpen(false);
+  }
+
+  function editActiveDays(updatedProgram: Program) {
+    setPrograms(prev => prev.map(p => p.id === updatedProgram.id ? updatedProgram : p));
+    setActiveProgram(updatedProgram);
+
+    // Rebuild fresh weeks from the updated program template
+    const freshWeeks = buildProgramWeeks(updatedProgram);
+
+    setWeeks((prevWeeks: any) => {
+      return freshWeeks.map((freshWeek: any, wi: number) => {
+        const prevWeek = prevWeeks[wi];
+        if (!prevWeek) return freshWeek; // brand-new week beyond old length — use fresh
+
+        return {
+          ...freshWeek,
+          days: freshWeek.days.map((freshDay: any, di: number) => {
+            const isDone = !!dayFinished[`${wi}-${di}`];
+            if (isDone) {
+              // Preserve the completed day exactly as logged — don't touch it
+              return prevWeek.days[di] ?? freshDay;
+            }
+            // Not yet done — use the fresh template day
+            return freshDay;
+          }),
+        };
+      });
+    });
+
+    // dayFinished, activeWeek, activeDay, workoutSummary all stay as-is
+  }
+
   // ── Derived ──────────────────────────────────────────────────────────────────
   const currentWeek = weeks[activeWeek];
   const currentDay = currentWeek?.days[activeDay];
@@ -823,6 +976,43 @@ export default function WorkoutTracker() {
         color: "#fff",
       }}
     >
+      {/* ── Drawer overlay ────────────────────────────────────────────────────── */}
+      {drawerOpen && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          display: "flex",
+        }}>
+          {/* Backdrop */}
+          <div
+            onClick={() => setDrawerOpen(false)}
+            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)" }}
+          />
+          {/* Panel */}
+          <div style={{
+            position: "relative", zIndex: 1,
+            width: Math.min(340, typeof window !== "undefined" ? window.innerWidth - 40 : 300),
+            height: "100%",
+            background: "#110a0a",
+            borderRight: "1px solid #2a1414",
+            display: "flex", flexDirection: "column",
+            overflow: "hidden",
+          }}>
+            <ProgramsPage
+              programs={programs}
+              activeProgram={activeProgram}
+              archivedPrograms={archivedPrograms}
+              weeksCompleted={activeWeek + 1}
+              onSave={saveProgram}
+              onActivate={activateProgram}
+              onEndProgram={endProgram}
+              onEditActiveDays={editActiveDays}
+              onDelete={deleteProgram}
+              onClose={() => setDrawerOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ── PR Banner ─────────────────────────────────────────────────────────── */}
       {prBanner && (
         <div
@@ -962,6 +1152,20 @@ export default function WorkoutTracker() {
           </h1>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Hamburger — opens Programs drawer */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            style={{
+              background: "none", border: "1px solid #2a1414",
+              borderRadius: 8, cursor: "pointer", padding: "6px 10px",
+              display: "flex", flexDirection: "column", gap: 4,
+            }}
+            title="Programs"
+          >
+            <span style={{ display: "block", width: 16, height: 2, background: "#ef4444", borderRadius: 2 }} />
+            <span style={{ display: "block", width: 12, height: 2, background: "#ef4444", borderRadius: 2 }} />
+            <span style={{ display: "block", width: 16, height: 2, background: "#ef4444", borderRadius: 2 }} />
+          </button>
           {syncStatus === "syncing" && (
             <span style={{ fontSize: 10, color: "#9f1239" }}>💾 Syncing...</span>
           )}

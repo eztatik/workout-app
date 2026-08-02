@@ -29,6 +29,34 @@ export async function initDb() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `;
-}
 
-// Made with Bob
+  // Create programs table
+  await sql`
+    CREATE TABLE IF NOT EXISTS programs_data (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL DEFAULT 'default' UNIQUE,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+
+  // Active program
+  await sql`
+    CREATE TABLE IF NOT EXISTS active_program_data (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL DEFAULT 'default' UNIQUE,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+
+  // Archived programs
+  await sql`
+    CREATE TABLE IF NOT EXISTS archived_programs_data (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL DEFAULT 'default' UNIQUE,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+}
