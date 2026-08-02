@@ -1031,7 +1031,6 @@ export default function WorkoutTracker() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>🏆</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 13, letterSpacing: 1 }}>
                 PERSONAL RECORD!
@@ -1167,7 +1166,7 @@ export default function WorkoutTracker() {
             <span style={{ display: "block", width: 16, height: 2, background: "#ef4444", borderRadius: 2 }} />
           </button>
           {syncStatus === "syncing" && (
-            <span style={{ fontSize: 10, color: "#9f1239" }}>💾 Syncing...</span>
+            <span style={{ fontSize: 10, color: "#9f1239" }}>Syncing...</span>
           )}
           {syncStatus === "synced" && (
             <span style={{ fontSize: 10, color: "#f87171" }}>✓ Saved</span>
@@ -1438,7 +1437,6 @@ export default function WorkoutTracker() {
           <div
             style={{ textAlign: "center", padding: "60px 0", color: "#333350" }}
           >
-            <div style={{ fontSize: 32, marginBottom: 10 }}>🏋️</div>
             <div style={{ fontSize: 11, letterSpacing: 2 }}>
               NO EXERCISES FOR {DAYS[activeDay].toUpperCase()}
             </div>
@@ -1560,7 +1558,7 @@ export default function WorkoutTracker() {
                       <div
                         style={{ marginTop: 4, fontSize: 11, color: "#9f1239" }}
                       >
-                        💡 {w.tip}
+                        {w.tip}
                       </div>
                     )}
                     {w.note && !w.tip && (
@@ -1770,7 +1768,7 @@ export default function WorkoutTracker() {
                   gap: 10,
                 }}
               >
-                <span style={{ fontSize: 18 }}>🏁</span> FINISH WORKOUT
+                FINISH WORKOUT
               </button>
             ) : (
               <div
@@ -1782,7 +1780,6 @@ export default function WorkoutTracker() {
                   textAlign: "center",
                 }}
               >
-                <div style={{ fontSize: 22, marginBottom: 6 }}>✅</div>
                 <div
                   style={{
                     fontSize: 13,
@@ -1858,7 +1855,7 @@ export default function WorkoutTracker() {
                 {isLastWeekAllDone && (
                   <div style={{ marginTop: 16, borderTop: "1px solid #2a1414", paddingTop: 16 }}>
                     <div style={{ fontSize: 11, color: "#fca5a5", marginBottom: 8, letterSpacing: 1 }}>
-                      🎉 ALL {TOTAL_WEEKS} WEEKS COMPLETE!
+                      ALL {TOTAL_WEEKS} WEEKS COMPLETE
                     </div>
                     <button
                       onClick={copyLastWeekToNewPlan}

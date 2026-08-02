@@ -171,7 +171,6 @@ function ExercisePicker({ onAdd, onClose }: ExercisePickerProps) {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {BODY_REGIONS.map(r => (
               <button key={r.id} onClick={() => setRegion(r.id)} style={bigOptionBtn}>
-                <span style={{ fontSize: 22 }}>{r.id === "upper" ? "💪" : "🦵"}</span>
                 <span style={{ fontWeight: 700, fontSize: 15 }}>{r.label}</span>
               </button>
             ))}
@@ -721,7 +720,6 @@ export default function ProgramsPage({
         {/* ── Saved programs ────────────────────────────────────────────────── */}
         {programs.length === 0 && (
           <div style={{ textAlign: "center", padding: "20px 0", color: "#3a2020" }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
             <div style={{ fontSize: 11, letterSpacing: 2 }}>NO SAVED PROGRAMS</div>
           </div>
         )}
