@@ -1,0 +1,390 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Workout App Design Research</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1f2328;
+    background: #ffffff;
+    padding: 32px 16px 48px;
+  }
+  .container { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #57606a; font-size: 13px; margin-bottom: 32px; }
+  h2 { font-size: 15px; font-weight: 700; margin: 28px 0 12px; color: #1f2328; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+  h3 { font-size: 13px; font-weight: 700; margin: 16px 0 6px; color: #3b82d4; }
+  p { margin-bottom: 10px; color: #1f2328; }
+  ul { padding-left: 18px; margin-bottom: 10px; }
+  li { margin-bottom: 4px; }
+
+  /* App comparison table */
+  .table-wrap { overflow-x: auto; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f7f8fa; text-align: left; padding: 8px 10px; font-weight: 700; border: 1px solid #e5e7eb; }
+  td { padding: 7px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+
+  /* Feature grid */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 540px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; }
+  .card h3 { margin-top: 0; }
+
+  /* Status badges */
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 2px 7px; margin-right: 4px; vertical-align: middle; }
+  .must    { background: #fee2e2; color: #b91c1c; }
+  .diff    { background: #dbeafe; color: #1d4ed8; }
+  .nice    { background: #dcfce7; color: #15803d; }
+  .warn    { background: #fef9c3; color: #a16207; }
+
+  /* Retention bar chart */
+  .chart { margin: 12px 0 20px; }
+  .bar-row { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
+  .bar-label { width: 140px; flex-shrink: 0; color: #57606a; }
+  .bar-track { flex: 1; background: #e5e7eb; border-radius: 4px; height: 14px; }
+  .bar-fill { height: 14px; border-radius: 4px; background: #3b82d4; }
+  .bar-fill.warn { background: #f97316; }
+  .bar-fill.good { background: #22c55e; }
+  .bar-val { width: 40px; text-align: right; color: #57606a; flex-shrink: 0; }
+
+  /* Section dividers */
+  .section { margin-bottom: 28px; }
+
+  /* Priority list */
+  .priority-row { display: flex; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #e5e7eb; gap: 10px; }
+  .priority-row:last-child { border-bottom: none; }
+  .priority-num { font-size: 18px; font-weight: 700; color: #e5e7eb; flex-shrink: 0; width: 28px; }
+  .priority-body strong { font-size: 13px; }
+  .priority-body p { margin: 0; font-size: 12px; color: #57606a; }
+
+  footer { margin-top: 48px; padding-top: 12px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #57606a; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Workout App Design Research</h1>
+  <p class="subtitle">Compiled from top apps &amp; industry data · 2025–2026</p>
+
+  
+  <div class="section">
+    <h2>The Retention Problem (Why Most Apps Fail)</h2>
+    <p>Features don't kill fitness apps — abandonment does. A 2024 scoping review of 525,824 users found a median <strong>70% churn within the first 100 days</strong>. Every design decision should be measured against this.</p>
+    <div class="chart">
+      <div class="bar-row"><span class="bar-label">Day 1 activation</span><div class="bar-track"><div class="bar-fill good" style="width:26%"></div></div><span class="bar-val">26%</span></div>
+      <div class="bar-row"><span class="bar-label">Day 28 activation</span><div class="bar-track"><div class="bar-fill warn" style="width:10%"></div></div><span class="bar-val">10%</span></div>
+      <div class="bar-row"><span class="bar-label">Day 30 retention</span><div class="bar-track"><div class="bar-fill warn" style="width:3%"></div></div><span class="bar-val">3%</span></div>
+      <div class="bar-row"><span class="bar-label">Annual subscribers</span><div class="bar-track"><div class="bar-fill" style="width:33%"></div></div><span class="bar-val">33%</span></div>
+    </div>
+    <p style="font-size:12px;color:#57606a">Source: 2024 peer-reviewed review + 2026 fitness app cohort study</p>
+  </div>
+
+  
+  <div class="section">
+    <h2>Top Apps — What Each Does Best</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>App</th>
+            <th>Standout Feature</th>
+            <th>Known Gap</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Strong</strong></td>
+            <td>Frictionless logging — fastest set entry on the market. Data-first: plate calculator, rest timers, 1RM tracking. CSV export.</td>
+            <td>Zero workout generation or recovery guidance. Assumes you already have a program.</td>
+            <td>~$5/mo or $99 lifetime</td>
+          </tr>
+          <tr>
+            <td><strong>Hevy</strong></td>
+            <td>Best free tier for tracking. Social features (share workouts, follow friends' routines). Clean, minimal UI.</td>
+            <td>No adaptive programming. Community features thin compared to JEFIT.</td>
+            <td>Free + Premium</td>
+          </tr>
+          <tr>
+            <td><strong>Fitbod</strong></td>
+            <td>AI-driven workout generation based on muscle fatigue &amp; recovery. Tracks weekly volume per muscle group vs. evidence-based targets.</td>
+            <td>Dense, data-heavy UI overwhelming for beginners. No wearable recovery awareness (sleep, HRV).</td>
+            <td>~$15/mo</td>
+          </tr>
+          <tr>
+            <td><strong>Nike Training Club</strong></td>
+            <td>Highest production quality guided videos. Free. Great for beginners and home workouts. Excellent onboarding.</td>
+            <td>No granular stat tracking or progressive overload tools. No customization. Weak community.</td>
+            <td>Free + Premium</td>
+          </tr>
+          <tr>
+            <td><strong>MyFitnessPal</strong></td>
+            <td>Best-in-class nutrition tracking. Huge food database. Macro management.</td>
+            <td>Workout tracking is secondary and clunky. Poor integration between nutrition and training load.</td>
+            <td>Free + Premium</td>
+          </tr>
+          <tr>
+            <td><strong>JEFIT</strong></td>
+            <td>1,400+ exercise library with animated demos and muscle maps. Strong community &amp; program sharing.</td>
+            <td>Cluttered UI. Ads on free tier. Less polished than Strong/Hevy.</td>
+            <td>Free + ~$7/mo</td>
+          </tr>
+          <tr>
+            <td><strong>Peloton</strong></td>
+            <td>Live classes, leaderboards, instructor variety. Best bottom-nav pattern for switching between content types.</td>
+            <td>Hardware-locked experience. Expensive. Poor offline support.</td>
+            <td>$44/mo + hardware</td>
+          </tr>
+          <tr>
+            <td><strong>SensAI</strong></td>
+            <td>Recovery-aware AI coaching — reads Apple Watch / Oura / WHOOP data before planning sessions. 43.5% weekly engagement (3× industry average).</td>
+            <td>Newer app, smaller exercise library.</td>
+            <td>Subscription</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>Feature Map — What to Build</h2>
+    <div class="grid">
+      <div class="card">
+        <h3><span class="badge must">MVP</span> Core Loop</h3>
+        <ul>
+          <li>Frictionless workout logging (minimal taps per set)</li>
+          <li>Rest timer with auto-start after logging a set</li>
+          <li>Exercise library with animated demos</li>
+          <li>Custom routine builder</li>
+          <li>Previous performance shown inline while logging</li>
+          <li>Offline mode — gym connectivity is unreliable</li>
+          <li>HealthKit / Google Fit (Health Connect) sync</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="badge must">MVP</span> Onboarding &amp; Retention</h3>
+        <ul>
+          <li>Goal-based onboarding (&lt;3 screens to first workout)</li>
+          <li>Push reminders — smart scheduling, not spam</li>
+          <li>Streak / habit tracking visible on home screen</li>
+          <li>First-workout template so new users aren't blank-slated</li>
+          <li>Progress photos or body measurement logging</li>
+          <li>Weekly summary notification ("You hit 3/4 workouts")</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="badge diff">Differentiator</span> Progressive Intelligence</h3>
+        <ul>
+          <li>Auto-detect personal records and celebrate them</li>
+          <li>Volume tracking per muscle group vs. targets</li>
+          <li>Adaptive plans that evolve with the user's progress</li>
+          <li>AI workout generation based on available equipment</li>
+          <li>Progressive overload suggestions (weight/rep increments)</li>
+          <li>Recovery awareness (fatigue flags, deload week prompts)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="badge diff">Differentiator</span> Social &amp; Community</h3>
+        <ul>
+          <li>Share workouts / routines with the community</li>
+          <li>Follow friends' training activity</li>
+          <li>Group challenges and leaderboards</li>
+          <li>"Your friend just finished a workout" nudge</li>
+          <li>Public routine library (like Hevy / JEFIT)</li>
+          <li>Coach/trainer account type for client management</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="badge nice">Nice-to-Have</span> Content &amp; Guidance</h3>
+        <ul>
+          <li>Guided video or audio workouts</li>
+          <li>Muscle group diagrams on exercises</li>
+          <li>Form cue tips per exercise</li>
+          <li>Educational content (technique, nutrition basics)</li>
+          <li>Mobility / warm-up / cool-down modules</li>
+          <li>Music integration or playlist control</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="badge nice">Nice-to-Have</span> Health Ecosystem</h3>
+        <ul>
+          <li>Wearable integration (Apple Watch, Garmin, WHOOP, Oura)</li>
+          <li>HRV / sleep-aware scheduling</li>
+          <li>Nutrition logging or MyFitnessPal integration</li>
+          <li>Calorie / macro tracking linked to training load</li>
+          <li>Body weight / measurement tracking</li>
+          <li>Geolocation for outdoor runs/walks</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>UI/UX Patterns That Work</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Navigation</h3>
+        <ul>
+          <li><strong>Persistent bottom nav</strong> (Home, Workouts, Progress, Profile) — Peloton's model, no deep menus</li>
+          <li>Maximum 3 taps to reach any key action</li>
+          <li>Floating "Start Workout" CTA always visible</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Workout Logging Screen</h3>
+        <ul>
+          <li>Previous weight/reps shown inline next to input fields</li>
+          <li>Swipe to complete set, not a small checkbox</li>
+          <li>Auto-start rest timer on set completion</li>
+          <li>Large, thumb-friendly input targets</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Progress &amp; Data</h3>
+        <ul>
+          <li>Visual volume charts (weekly/monthly) per muscle group</li>
+          <li>Personal record timeline — Strong's "PR badge" model</li>
+          <li>Body weight trend line with simple graph</li>
+          <li>Workout calendar heatmap (GitHub-style)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Gamification</h3>
+        <ul>
+          <li>Streaks for consecutive training days</li>
+          <li>Milestone badges (first PR, 50 workouts, etc.)</li>
+          <li>Weekly goal ring (Apple Fitness+ style)</li>
+          <li>Level / XP system for beginners (keeps motivation)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Exercise Library UX</h3>
+        <ul>
+          <li>Filter by muscle group + equipment + difficulty</li>
+          <li>Animated GIF or short video demo for every exercise</li>
+          <li>Primary + secondary muscle group tags</li>
+          <li>User-created custom exercises</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Onboarding Flow</h3>
+        <ul>
+          <li>Goal selection → experience level → available equipment</li>
+          <li>Generate a starter plan automatically, don't blank-slate</li>
+          <li>First workout within 60 seconds of sign-up</li>
+          <li>Skip option always visible (respect power users)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>What Most Apps Are Still Missing</h2>
+    <div class="priority-row">
+      <div class="priority-num">1</div>
+      <div class="priority-body">
+        <strong>Recovery-aware scheduling</strong>
+        <p>Almost no app reads wearable data (sleep, HRV, resting HR) before generating a session. SensAI is the only real exception and achieves 3× industry engagement. This is the single biggest differentiation opportunity in 2025–2026.</p>
+      </div>
+    </div>
+    <div class="priority-row">
+      <div class="priority-num">2</div>
+      <div class="priority-body">
+        <strong>Nutrition ↔ Training integration</strong>
+        <p>Nutrition and workout apps exist in separate silos. An app that ties caloric intake and macro balance directly to training load recommendations (e.g., "You're under-fuelled for today's heavy squat session") has no real competition.</p>
+      </div>
+    </div>
+    <div class="priority-row">
+      <div class="priority-num">3</div>
+      <div class="priority-body">
+        <strong>Adaptive programs that actually adapt</strong>
+        <p>Most "adaptive" plans just swap exercises randomly. True adaptation means tracking performance trajectory, detecting plateaus, and restructuring the mesocycle — not just randomizing the accessory work.</p>
+      </div>
+    </div>
+    <div class="priority-row">
+      <div class="priority-num">4</div>
+      <div class="priority-body">
+        <strong>Offline-first architecture</strong>
+        <p>Gyms and outdoor training spots have poor connectivity. Apps that sync in the background and never block on a network call retain more users. This is listed as a top technical failure category in 2024 research.</p>
+      </div>
+    </div>
+    <div class="priority-row">
+      <div class="priority-num">5</div>
+      <div class="priority-body">
+        <strong>Post-goal flow</strong>
+        <p>When a user completes their goal (runs a 5K, loses 10 lbs), most apps go silent. A well-designed post-goal celebration + automatic next-goal suggestion is a documented churn prevention moment that almost no app handles well.</p>
+      </div>
+    </div>
+    <div class="priority-row">
+      <div class="priority-num">6</div>
+      <div class="priority-body">
+        <strong>Accessibility &amp; inclusivity</strong>
+        <p>Voice guidance, subtitle support, and adaptive workout libraries for users with physical limitations. FitOn does this best. Most competitors still ignore it entirely.</p>
+      </div>
+    </div>
+    <div class="priority-row">
+      <div class="priority-num">7</div>
+      <div class="priority-body">
+        <strong>Data portability</strong>
+        <p>Strong's CSV export is rare. Users who know their data is locked in feel less committed to the app. Offering export builds trust paradoxically increases retention.</p>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2>Design Trends to Consider (2025–2026)</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Dark mode as default</h3>
+        <p>Gym environments are often low-light. Dark-first palettes (like Strong, Hevy) reduce eye strain mid-workout and battery drain on OLED screens.</p>
+      </div>
+      <div class="card">
+        <h3>Large, glanceable metrics</h3>
+        <p>During a workout your hands are busy. Key numbers (reps, weight, rest timer) should be readable from arm's length — 32px+ font sizes for active metrics.</p>
+      </div>
+      <div class="card">
+        <h3>Minimalist mid-workout UI</h3>
+        <p>Strip everything except the current exercise when a session is active. Nike Training Club and Strong both collapse navigation during active workouts.</p>
+      </div>
+      <div class="card">
+        <h3>AI personalization</h3>
+        <p>Users expect the app to learn their preferences. Visible "why" explanations ("We chose this because your chest volume is behind this week") dramatically increase trust in AI recommendations.</p>
+      </div>
+      <div class="card">
+        <h3>Gamification 2.0</h3>
+        <p>Beyond streaks: narrative progression, unlockable content, seasonal challenges. Duolingo's model applied to fitness drives daily opens better than streaks alone.</p>
+      </div>
+      <div class="card">
+        <h3>Wearable-native widgets</h3>
+        <p>Apple Watch complications and Android watch tiles showing today's workout, rest timer, and next exercise. Reduces phone handling mid-session.</p>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2><span class="badge warn">Avoid</span> Common Design Mistakes</h2>
+    <ul>
+      <li><strong>Over-scoping the MVP:</strong> shipping AI coaching + social + nutrition + live classes at once delays launch and produces a mediocre experience across all of them.</li>
+      <li><strong>Deep menu navigation:</strong> anything more than 3 levels deep kills engagement. Persistent bottom nav is non-negotiable.</li>
+      <li><strong>Blocking on network:</strong> any screen that shows a spinner before a workout can start will be uninstalled.</li>
+      <li><strong>Same routine every week:</strong> the number-one documented churn driver. Even simple variation signals progress.</li>
+      <li><strong>No post-goal flow:</strong> completing a goal with no next step is a silent churn moment — the app just becomes purposeless.</li>
+      <li><strong>Ignoring the "March problem":</strong> users motivated in January are gone by March. Design specifically for the motivation trough at weeks 6–10.</li>
+    </ul>
+  </div>
+
+  <footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>

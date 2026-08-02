@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const STORAGE_KEY = "workout-tracker-data-v9";
 const DAYS = ["Saturday", "Sunday", "Monday", "Wednesday"];
 const DAY_SHORT = ["SAT", "SUN", "MON", "WED"];
 const TOTAL_WEEKS = 7;
+const DEFAULT_REST_SECONDS = 90;
+
+// ─── data helpers ────────────────────────────────────────────────────────────
 
 function progressDay(sourceDay: any, weekOffset: number) {
-  // weekOffset: 1 = next week, 2 = week after, etc.
   return {
     ...sourceDay,
     workouts: sourceDay.workouts.map((w: any) => {
@@ -78,7 +80,6 @@ function buildWorkout(
 }
 
 function buildAllWeeks() {
-  // Week 1 baseline days
   const baseDays = [
     {
       name: "Saturday",
@@ -239,11 +240,79 @@ function buildAllWeeks() {
   return Array.from({ length: TOTAL_WEEKS }, (_, wi) => ({
     label: `Week ${wi + 1}`,
     aiGenerated: wi > 0,
-    days: baseDays.map((day, di) =>
+    days: baseDays.map((day) =>
       wi === 0 ? { ...day } : progressDay(day, wi),
     ),
   }));
 }
+
+// Return the best (max) logged weight × reps for a given exercise name across
+// all weeks prior to `beforeWeekIndex`, for a specific set index.
+// Returns null if no prior logged data exists.
+function getPrevPerf(
+  weeks: any[],
+  dayFinished: Record<string, boolean>,
+  beforeWeekIndex: number,
+  dayIndex: number,
+  workoutName: string,
+  setIndex: number,
+): { weight: string; reps: string } | null {
+  // Walk backwards from the most recent finished week before current
+  for (let wi = beforeWeekIndex - 1; wi >= 0; wi--) {
+    const key = `${wi}-${dayIndex}`;
+    if (!dayFinished[key]) continue;
+    const day = weeks[wi]?.days[dayIndex];
+    if (!day) continue;
+    const workout = day.workouts.find((w: any) => w.name === workoutName);
+    if (!workout) continue;
+    const set = workout.sets[setIndex];
+    if (!set) continue;
+    return { weight: set.weight, reps: set.reps };
+  }
+  return null;
+}
+
+// Check if the logged set is an all-time PR for that exercise name across prior
+// finished weeks (for the same day index). Returns true if it beats everything.
+function checkIsPR(
+  weeks: any[],
+  dayFinished: Record<string, boolean>,
+  currentWeekIndex: number,
+  dayIndex: number,
+  workoutName: string,
+  weight: string,
+  reps: string,
+): boolean {
+  const w = Number(weight);
+  const r = Number(reps);
+  const isBodyweight = w === 0;
+
+  for (let wi = 0; wi < currentWeekIndex; wi++) {
+    const key = `${wi}-${dayIndex}`;
+    if (!dayFinished[key]) continue;
+    const day = weeks[wi]?.days[dayIndex];
+    if (!day) continue;
+    const workout = day.workouts.find((wo: any) => wo.name === workoutName);
+    if (!workout) continue;
+    for (const s of workout.sets) {
+      const sw = Number(s.weight);
+      const sr = Number(s.reps);
+      if (isBodyweight) {
+        if (sr >= r) return false;
+      } else {
+        if (sw > w) return false;
+        if (sw === w && sr >= r) return false;
+      }
+    }
+  }
+  // Only meaningful if there's at least one prior finished week to compare
+  for (let wi = 0; wi < currentWeekIndex; wi++) {
+    if (dayFinished[`${wi}-${dayIndex}`]) return true;
+  }
+  return false;
+}
+
+// ─── component ───────────────────────────────────────────────────────────────
 
 export default function WorkoutTracker() {
   const [weeks, setWeeks] = useState(() => {
@@ -285,7 +354,62 @@ export default function WorkoutTracker() {
     "synced",
   );
 
-  // Load data from database on mount
+  // ── Rest timer ──────────────────────────────────────────────────────────────
+  const [restSeconds, setRestSeconds] = useState(0);
+  const [restActive, setRestActive] = useState(false);
+  const restIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [restDuration, setRestDuration] = useState(DEFAULT_REST_SECONDS);
+
+  const startRestTimer = useCallback(() => {
+    if (restIntervalRef.current) clearInterval(restIntervalRef.current);
+    setRestSeconds(restDuration);
+    setRestActive(true);
+    restIntervalRef.current = setInterval(() => {
+      setRestSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(restIntervalRef.current!);
+          setRestActive(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [restDuration]);
+
+  const dismissRestTimer = useCallback(() => {
+    if (restIntervalRef.current) clearInterval(restIntervalRef.current);
+    setRestActive(false);
+    setRestSeconds(0);
+  }, []);
+
+  useEffect(() => () => { if (restIntervalRef.current) clearInterval(restIntervalRef.current); }, []);
+
+  // ── PR banner ───────────────────────────────────────────────────────────────
+  const [prBanner, setPrBanner] = useState<string | null>(null);
+  const prTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showPR = useCallback((exerciseName: string) => {
+    if (prTimeoutRef.current) clearTimeout(prTimeoutRef.current);
+    setPrBanner(exerciseName);
+    prTimeoutRef.current = setTimeout(() => setPrBanner(null), 4000);
+  }, []);
+
+  // ── Workout start time for duration tracking ─────────────────────────────
+  const workoutStartRef = useRef<number | null>(null);
+  const [workoutSummary, setWorkoutSummary] = useState<{
+    sets: number;
+    volume: number;
+    durationMin: number;
+  } | null>(null);
+
+  // Start the clock on first set logged
+  const markWorkoutStart = useCallback(() => {
+    if (!workoutStartRef.current) {
+      workoutStartRef.current = Date.now();
+    }
+  }, []);
+
+  // ── DB sync ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function loadFromDb() {
       try {
@@ -313,7 +437,6 @@ export default function WorkoutTracker() {
     loadFromDb();
   }, []);
 
-  // Save to localStorage
   useEffect(() => {
     if (typeof window !== "undefined" && !isLoading) {
       try {
@@ -333,10 +456,8 @@ export default function WorkoutTracker() {
     }
   }, [dayFinished, isLoading]);
 
-  // Sync to database (debounced)
   useEffect(() => {
     if (isLoading) return;
-
     const timeoutId = setTimeout(async () => {
       setSyncStatus("syncing");
       try {
@@ -345,33 +466,44 @@ export default function WorkoutTracker() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ weeks, dayFinished }),
         });
-        if (response.ok) {
-          setSyncStatus("synced");
-        } else {
-          setSyncStatus("error");
-        }
-      } catch (error) {
-        console.error("Failed to sync to database:", error);
+        setSyncStatus(response.ok ? "synced" : "error");
+      } catch {
         setSyncStatus("error");
       }
-    }, 2000); // Debounce for 2 seconds
-
+    }, 2000);
     return () => clearTimeout(timeoutId);
   }, [weeks, dayFinished, isLoading]);
 
-  // When a day is finished, push its actual logged data into all future weeks for that day
+  // ── Mutations ────────────────────────────────────────────────────────────────
+
   function finishDay() {
     const key = `${activeWeek}-${activeDay}`;
     if (dayFinished[key]) return;
-    setDayFinished((prev) => ({ ...prev, [key]: true }));
 
-    // Get the current day's actual workout data (with logged weights/reps)
     const currentDayData = weeks[activeWeek].days[activeDay];
 
-    // Update all future weeks for this same day index using progressive overload from THIS week's data
+    // Compute summary
+    let totalSets = 0;
+    let totalVolume = 0;
+    currentDayData.workouts.forEach((w: any) => {
+      w.sets.forEach((s: any) => {
+        if (s.logged) {
+          totalSets++;
+          totalVolume += Number(s.weight) * Number(s.reps);
+        }
+      });
+    });
+    const durationMin = workoutStartRef.current
+      ? Math.round((Date.now() - workoutStartRef.current) / 60000)
+      : 0;
+    workoutStartRef.current = null;
+    setWorkoutSummary({ sets: totalSets, volume: totalVolume, durationMin });
+
+    setDayFinished((prev) => ({ ...prev, [key]: true }));
+
     setWeeks((prev: any) =>
       prev.map((week: any, wi: number) => {
-        if (wi <= activeWeek) return week; // don't touch current or past weeks
+        if (wi <= activeWeek) return week;
         const weekOffset = wi - activeWeek;
         const progressedDay = progressDay(currentDayData, weekOffset);
         return {
@@ -419,6 +551,33 @@ export default function WorkoutTracker() {
   }
 
   function toggleLogged(workoutId: number, setId: number) {
+    markWorkoutStart();
+
+    // Determine if we're logging (not un-logging)
+    const currentDay = weeks[activeWeek]?.days[activeDay];
+    const workout = currentDay?.workouts.find((w: any) => w.id === workoutId);
+    const set = workout?.sets.find((s: any) => s.id === setId);
+    const willBeLogged = set ? !set.logged : false;
+
+    if (willBeLogged) {
+      // Start rest timer
+      startRestTimer();
+
+      // Check PR
+      if (workout && set) {
+        const isPR = checkIsPR(
+          weeks,
+          dayFinished,
+          activeWeek,
+          activeDay,
+          workout.name,
+          set.weight,
+          set.reps,
+        );
+        if (isPR) showPR(workout.name);
+      }
+    }
+
     setWeeks((prev: any) =>
       prev.map((week: any, wi: number) =>
         wi !== activeWeek
@@ -604,11 +763,12 @@ export default function WorkoutTracker() {
     setActiveWeek(0);
     setActiveDay(0);
     setConfirmReset(false);
+    setWorkoutSummary(null);
+    workoutStartRef.current = null;
   }
 
   function copyLastWeekToNewPlan() {
     const lastWeek = weeks[weeks.length - 1];
-    // Strip logged state from the last week's days to use as a clean Week 1 baseline
     const newBaseDays = lastWeek.days.map((day: any) => ({
       ...day,
       workouts: day.workouts.map((w: any) => ({
@@ -635,8 +795,11 @@ export default function WorkoutTracker() {
     setDayFinished({});
     setActiveWeek(0);
     setActiveDay(0);
+    setWorkoutSummary(null);
+    workoutStartRef.current = null;
   }
 
+  // ── Derived ──────────────────────────────────────────────────────────────────
   const currentWeek = weeks[activeWeek];
   const currentDay = currentWeek?.days[activeDay];
   const dayKey = `${activeWeek}-${activeDay}`;
@@ -646,6 +809,11 @@ export default function WorkoutTracker() {
     isLastWeek &&
     DAYS.every((_, di) => dayFinished[`${activeWeek}-${di}`]);
 
+  // Percentage of rest timer remaining for progress ring
+  const restPct = restActive && restDuration > 0 ? restSeconds / restDuration : 0;
+  const restCircum = 2 * Math.PI * 18; // radius 18
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div
       style={{
@@ -655,7 +823,115 @@ export default function WorkoutTracker() {
         color: "#fff",
       }}
     >
-      {/* Header */}
+      {/* ── PR Banner ─────────────────────────────────────────────────────────── */}
+      {prBanner && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            background: "linear-gradient(90deg, #7c3aed, #a855f7)",
+            padding: "12px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>🏆</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, letterSpacing: 1 }}>
+                PERSONAL RECORD!
+              </div>
+              <div style={{ fontSize: 11, color: "#e9d5ff" }}>{prBanner}</div>
+            </div>
+          </div>
+          <button
+            onClick={() => setPrBanner(null)}
+            style={{ background: "none", border: "none", color: "#e9d5ff", cursor: "pointer", fontSize: 18, padding: "0 4px" }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* ── Rest Timer Banner ──────────────────────────────────────────────────── */}
+      {restActive && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 99,
+            background: "#1a1a2e",
+            border: "1px solid #3b3b60",
+            borderRadius: 16,
+            padding: "10px 20px 10px 14px",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            minWidth: 220,
+            boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* Circular countdown */}
+          <svg width={44} height={44} style={{ flexShrink: 0 }}>
+            <circle cx={22} cy={22} r={18} fill="none" stroke="#2a2a44" strokeWidth={3} />
+            <circle
+              cx={22} cy={22} r={18} fill="none"
+              stroke={restSeconds <= 10 ? "#f87171" : "#6366f1"}
+              strokeWidth={3}
+              strokeDasharray={restCircum}
+              strokeDashoffset={restCircum * (1 - restPct)}
+              strokeLinecap="round"
+              transform="rotate(-90 22 22)"
+              style={{ transition: "stroke-dashoffset 0.9s linear, stroke 0.3s" }}
+            />
+            <text x={22} y={27} textAnchor="middle" fill="#fff" fontSize={13} fontWeight={700} fontFamily="system-ui">
+              {restSeconds}
+            </text>
+          </svg>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, letterSpacing: 2, color: "#6366f1", marginBottom: 2 }}>REST TIMER</div>
+            <div style={{ fontSize: 12, color: "#9999cc" }}>
+              {restSeconds > 0 ? `${restSeconds}s remaining` : "Time's up!"}
+            </div>
+          </div>
+          {/* Duration selector */}
+          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+            {[60, 90, 120].map((sec) => (
+              <button
+                key={sec}
+                onClick={() => setRestDuration(sec)}
+                style={{
+                  background: restDuration === sec ? "#2e1a6e" : "none",
+                  border: `1px solid ${restDuration === sec ? "#5a3aaa" : "#2a2a44"}`,
+                  color: restDuration === sec ? "#c4b5fd" : "#555570",
+                  borderRadius: 6,
+                  padding: "3px 7px",
+                  fontSize: 10,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {sec}s
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={dismissRestTimer}
+            style={{ background: "none", border: "none", color: "#444460", cursor: "pointer", fontSize: 18, padding: "0 2px", flexShrink: 0 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* ── Header ────────────────────────────────────────────────────────────── */}
       <div
         style={{
           background: "#1a1a22",
@@ -664,6 +940,8 @@ export default function WorkoutTracker() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          marginTop: prBanner ? 48 : 0,
+          transition: "margin-top 0.2s",
         }}
       >
         <div>
@@ -684,11 +962,8 @@ export default function WorkoutTracker() {
           </h1>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {/* Sync Status */}
           {syncStatus === "syncing" && (
-            <span style={{ fontSize: 10, color: "#7c6fcd" }}>
-              💾 Syncing...
-            </span>
+            <span style={{ fontSize: 10, color: "#7c6fcd" }}>💾 Syncing...</span>
           )}
           {syncStatus === "synced" && (
             <span style={{ fontSize: 10, color: "#4ade80" }}>✓ Saved</span>
@@ -730,7 +1005,7 @@ export default function WorkoutTracker() {
         </div>
       </div>
 
-      {/* Week tabs */}
+      {/* ── Week tabs ─────────────────────────────────────────────────────────── */}
       <div
         style={{
           display: "flex",
@@ -748,6 +1023,7 @@ export default function WorkoutTracker() {
               onClick={() => {
                 setActiveWeek(i);
                 setActiveDay(0);
+                setWorkoutSummary(null);
               }}
               style={{
                 background: "none",
@@ -778,7 +1054,7 @@ export default function WorkoutTracker() {
         })}
       </div>
 
-      {/* Day tabs */}
+      {/* ── Day tabs ──────────────────────────────────────────────────────────── */}
       <div
         style={{
           display: "flex",
@@ -795,6 +1071,7 @@ export default function WorkoutTracker() {
               onClick={() => {
                 setActiveDay(i);
                 setShowAddForm(false);
+                setWorkoutSummary(null);
               }}
               style={{
                 background: "none",
@@ -823,9 +1100,9 @@ export default function WorkoutTracker() {
         })}
       </div>
 
-      {/* Content */}
+      {/* ── Content ───────────────────────────────────────────────────────────── */}
       <div
-        style={{ padding: "16px 16px 60px", maxWidth: 680, margin: "0 auto" }}
+        style={{ padding: "16px 16px 120px", maxWidth: 680, margin: "0 auto" }}
       >
         {/* Day header */}
         <div
@@ -1100,7 +1377,7 @@ export default function WorkoutTracker() {
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "28px 1fr 1fr 44px",
+                      gridTemplateColumns: "28px 1fr 1fr 1fr 44px",
                       gap: 6,
                       padding: "8px 14px 4px",
                       borderBottom: "1px solid #1e1e2a",
@@ -1109,92 +1386,118 @@ export default function WorkoutTracker() {
                     <div style={colHeader}></div>
                     <div style={colHeader}>WEIGHT</div>
                     <div style={colHeader}>REPS</div>
+                    <div style={{ ...colHeader, color: "#333355" }}>PREV</div>
                     <div style={{ ...colHeader, textAlign: "center" }}>LOG</div>
                   </div>
 
                   {/* Set rows */}
-                  {w.sets.map((s: any, si: number) => (
-                    <div
-                      key={s.id}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "28px 1fr 1fr 44px",
-                        gap: 6,
-                        padding: "6px 14px",
-                        background: s.logged ? "#0f2318" : "transparent",
-                        borderBottom: "1px solid #1a1a24",
-                        alignItems: "center",
-                      }}
-                    >
+                  {w.sets.map((s: any, si: number) => {
+                    const prev = getPrevPerf(
+                      weeks,
+                      dayFinished,
+                      activeWeek,
+                      activeDay,
+                      w.name,
+                      si,
+                    );
+                    return (
                       <div
+                        key={s.id}
                         style={{
-                          fontSize: 11,
-                          color: "#444460",
-                          fontWeight: 600,
-                          textAlign: "center",
+                          display: "grid",
+                          gridTemplateColumns: "28px 1fr 1fr 1fr 44px",
+                          gap: 6,
+                          padding: "6px 14px",
+                          background: s.logged ? "#0f2318" : "transparent",
+                          borderBottom: "1px solid #1a1a24",
+                          alignItems: "center",
                         }}
-                      >
-                        {si + 1}
-                      </div>
-                      <input
-                        inputMode="decimal"
-                        value={s.weight}
-                        onChange={(e) =>
-                          updateSet(w.id, s.id, "weight", e.target.value)
-                        }
-                        style={{
-                          ...setInput,
-                          color: s.logged ? "#4ade80" : "#fff",
-                          background: s.logged ? "#0a1f12" : "#0d0d16",
-                          border: `1px solid ${s.logged ? "#166534" : "#2a2a40"}`,
-                        }}
-                      />
-                      <input
-                        inputMode="numeric"
-                        value={s.reps}
-                        onChange={(e) =>
-                          updateSet(w.id, s.id, "reps", e.target.value)
-                        }
-                        style={{
-                          ...setInput,
-                          color: s.logged ? "#4ade80" : "#fff",
-                          background: s.logged ? "#0a1f12" : "#0d0d16",
-                          border: `1px solid ${s.logged ? "#166534" : "#2a2a40"}`,
-                        }}
-                      />
-                      <div
-                        style={{ display: "flex", justifyContent: "center" }}
                       >
                         <div
-                          onClick={() => toggleLogged(w.id, s.id)}
                           style={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: 6,
-                            border: `2px solid ${s.logged ? "#16a34a" : "#333355"}`,
-                            background: s.logged ? "#16a34a" : "transparent",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            transition: "all 0.15s",
+                            fontSize: 11,
+                            color: "#444460",
+                            fontWeight: 600,
+                            textAlign: "center",
                           }}
                         >
-                          {s.logged && (
-                            <span
-                              style={{
-                                color: "#fff",
-                                fontSize: 14,
-                                lineHeight: 1,
-                              }}
-                            >
-                              ✓
-                            </span>
-                          )}
+                          {si + 1}
+                        </div>
+                        <input
+                          inputMode="decimal"
+                          value={s.weight}
+                          onChange={(e) =>
+                            updateSet(w.id, s.id, "weight", e.target.value)
+                          }
+                          style={{
+                            ...setInput,
+                            color: s.logged ? "#4ade80" : "#fff",
+                            background: s.logged ? "#0a1f12" : "#0d0d16",
+                            border: `1px solid ${s.logged ? "#166534" : "#2a2a40"}`,
+                          }}
+                        />
+                        <input
+                          inputMode="numeric"
+                          value={s.reps}
+                          onChange={(e) =>
+                            updateSet(w.id, s.id, "reps", e.target.value)
+                          }
+                          style={{
+                            ...setInput,
+                            color: s.logged ? "#4ade80" : "#fff",
+                            background: s.logged ? "#0a1f12" : "#0d0d16",
+                            border: `1px solid ${s.logged ? "#166534" : "#2a2a40"}`,
+                          }}
+                        />
+                        {/* Previous performance */}
+                        <div
+                          style={{
+                            textAlign: "center",
+                            fontSize: 10,
+                            color: prev ? "#4a4a70" : "#2a2a40",
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {prev
+                            ? Number(prev.weight) === 0
+                              ? `${prev.reps}r`
+                              : `${prev.weight}×${prev.reps}`
+                            : "—"}
+                        </div>
+                        <div
+                          style={{ display: "flex", justifyContent: "center" }}
+                        >
+                          <div
+                            onClick={() => toggleLogged(w.id, s.id)}
+                            style={{
+                              width: 26,
+                              height: 26,
+                              borderRadius: 6,
+                              border: `2px solid ${s.logged ? "#16a34a" : "#333355"}`,
+                              background: s.logged ? "#16a34a" : "transparent",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {s.logged && (
+                              <span
+                                style={{
+                                  color: "#fff",
+                                  fontSize: 14,
+                                  lineHeight: 1,
+                                }}
+                              >
+                                ✓
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Add/remove set */}
                   <div style={{ padding: "8px 14px", display: "flex", gap: 8 }}>
@@ -1287,6 +1590,47 @@ export default function WorkoutTracker() {
                 >
                   {DAYS[activeDay].toUpperCase()} WEEK {activeWeek + 1} COMPLETE
                 </div>
+
+                {/* Workout Summary */}
+                {workoutSummary && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 24,
+                      margin: "12px 0",
+                      padding: "10px 0",
+                      borderTop: "1px solid #1a3a24",
+                      borderBottom: "1px solid #1a3a24",
+                    }}
+                  >
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "#4ade80" }}>
+                        {workoutSummary.sets}
+                      </div>
+                      <div style={{ fontSize: 9, letterSpacing: 2, color: "#555570" }}>SETS</div>
+                    </div>
+                    {workoutSummary.volume > 0 && (
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "#4ade80" }}>
+                          {workoutSummary.volume >= 1000
+                            ? `${(workoutSummary.volume / 1000).toFixed(1)}k`
+                            : workoutSummary.volume}
+                        </div>
+                        <div style={{ fontSize: 9, letterSpacing: 2, color: "#555570" }}>VOLUME</div>
+                      </div>
+                    )}
+                    {workoutSummary.durationMin > 0 && (
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "#4ade80" }}>
+                          {workoutSummary.durationMin}m
+                        </div>
+                        <div style={{ fontSize: 9, letterSpacing: 2, color: "#555570" }}>DURATION</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div
                   style={{
                     fontSize: 11,
@@ -1343,6 +1687,8 @@ export default function WorkoutTracker() {
     </div>
   );
 }
+
+// ─── shared styles ────────────────────────────────────────────────────────────
 
 const inputStyle = {
   background: "#0d0d18",
@@ -1407,5 +1753,3 @@ const colHeader = {
   fontWeight: 600,
   textAlign: "center" as const,
 };
-
-// Made with Bob
