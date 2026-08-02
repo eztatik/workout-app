@@ -953,7 +953,7 @@ export default function WorkoutTracker() {
               marginBottom: 2,
             }}
           >
-            4 DAY FAT LOSS
+            JHON'S LIFTLOG
           </div>
           <h1
             style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#fff" }}
@@ -966,7 +966,7 @@ export default function WorkoutTracker() {
             <span style={{ fontSize: 10, color: "#7c6fcd" }}>💾 Syncing...</span>
           )}
           {syncStatus === "synced" && (
-            <span style={{ fontSize: 10, color: "#4ade80" }}>✓ Saved</span>
+            <span style={{ fontSize: 10, color: "#fb923c" }}>✓ Saved</span>
           )}
           {syncStatus === "error" && (
             <span style={{ fontSize: 10, color: "#f87171" }}>⚠ Offline</span>
@@ -1036,7 +1036,7 @@ export default function WorkoutTracker() {
                   activeWeek === i
                     ? "#c4b5fd"
                     : weekDone
-                      ? "#4ade80"
+                      ? "#fb923c"
                       : "#555570",
                 padding: "10px 14px",
                 fontSize: 11,
@@ -1081,7 +1081,7 @@ export default function WorkoutTracker() {
                     ? "2px solid #6366f1"
                     : "2px solid transparent",
                 color:
-                  activeDay === i ? "#a5b4fc" : done ? "#4ade80" : "#444460",
+                  activeDay === i ? "#a5b4fc" : done ? "#fb923c" : "#444460",
                 padding: "9px 14px",
                 fontSize: 11,
                 letterSpacing: 1,
@@ -1250,7 +1250,7 @@ export default function WorkoutTracker() {
                     background: "#1a1a22",
                     borderRadius: 12,
                     overflow: "hidden",
-                    border: `1px solid ${allLogged ? "#166534" : "#252535"}`,
+                    border: `1px solid ${allLogged ? "#c2410c" : "#252535"}`,
                   }}
                 >
                   {/* Exercise header */}
@@ -1300,8 +1300,8 @@ export default function WorkoutTracker() {
                             <span
                               style={{
                                 fontSize: 9,
-                                background: "#14532d",
-                                color: "#4ade80",
+                                background: "#431407",
+                                color: "#fb923c",
                                 borderRadius: 4,
                                 padding: "2px 6px",
                                 letterSpacing: 1,
@@ -1408,7 +1408,7 @@ export default function WorkoutTracker() {
                           gridTemplateColumns: "28px 1fr 1fr 1fr 44px",
                           gap: 6,
                           padding: "6px 14px",
-                          background: s.logged ? "#0f2318" : "transparent",
+                          background: s.logged ? "#1c1008" : "transparent",
                           borderBottom: "1px solid #1a1a24",
                           alignItems: "center",
                         }}
@@ -1431,9 +1431,9 @@ export default function WorkoutTracker() {
                           }
                           style={{
                             ...setInput,
-                            color: s.logged ? "#4ade80" : "#fff",
-                            background: s.logged ? "#0a1f12" : "#0d0d16",
-                            border: `1px solid ${s.logged ? "#166534" : "#2a2a40"}`,
+                            color: s.logged ? "#fb923c" : "#fff",
+                            background: s.logged ? "#1c1008" : "#0d0d16",
+                            border: `1px solid ${s.logged ? "#c2410c" : "#2a2a40"}`,
                           }}
                         />
                         <input
@@ -1444,9 +1444,9 @@ export default function WorkoutTracker() {
                           }
                           style={{
                             ...setInput,
-                            color: s.logged ? "#4ade80" : "#fff",
-                            background: s.logged ? "#0a1f12" : "#0d0d16",
-                            border: `1px solid ${s.logged ? "#166534" : "#2a2a40"}`,
+                            color: s.logged ? "#fb923c" : "#fff",
+                            background: s.logged ? "#1c1008" : "#0d0d16",
+                            border: `1px solid ${s.logged ? "#c2410c" : "#2a2a40"}`,
                           }}
                         />
                         {/* Previous performance */}
@@ -1473,8 +1473,8 @@ export default function WorkoutTracker() {
                               width: 26,
                               height: 26,
                               borderRadius: 6,
-                              border: `2px solid ${s.logged ? "#16a34a" : "#333355"}`,
-                              background: s.logged ? "#16a34a" : "transparent",
+                              border: `2px solid ${s.logged ? "#ea580c" : "#333355"}`,
+                              background: s.logged ? "#ea580c" : "transparent",
                               cursor: "pointer",
                               display: "flex",
                               alignItems: "center",
@@ -1551,10 +1551,10 @@ export default function WorkoutTracker() {
                 style={{
                   width: "100%",
                   padding: "16px",
-                  background: "linear-gradient(135deg, #14532d, #166534)",
-                  border: "1px solid #16a34a",
+                  background: "linear-gradient(135deg, #7c2d12, #c2410c)",
+                  border: "1px solid #ea580c",
                   borderRadius: 12,
-                  color: "#4ade80",
+                  color: "#fb923c",
                   fontSize: 14,
                   fontWeight: 700,
                   letterSpacing: 2,
@@ -1571,8 +1571,8 @@ export default function WorkoutTracker() {
             ) : (
               <div
                 style={{
-                  background: "#0a1f12",
-                  border: "1px solid #166534",
+                  background: "#1c1008",
+                  border: "1px solid #c2410c",
                   borderRadius: 12,
                   padding: 18,
                   textAlign: "center",
@@ -1582,7 +1582,7 @@ export default function WorkoutTracker() {
                 <div
                   style={{
                     fontSize: 13,
-                    color: "#4ade80",
+                    color: "#fb923c",
                     fontWeight: 700,
                     letterSpacing: 2,
                     marginBottom: 4,
@@ -1600,19 +1600,19 @@ export default function WorkoutTracker() {
                       gap: 24,
                       margin: "12px 0",
                       padding: "10px 0",
-                      borderTop: "1px solid #1a3a24",
-                      borderBottom: "1px solid #1a3a24",
+                      borderTop: "1px solid #431407",
+                      borderBottom: "1px solid #431407",
                     }}
                   >
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: "#4ade80" }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "#fb923c" }}>
                         {workoutSummary.sets}
                       </div>
                       <div style={{ fontSize: 9, letterSpacing: 2, color: "#555570" }}>SETS</div>
                     </div>
                     {workoutSummary.volume > 0 && (
                       <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: "#4ade80" }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "#fb923c" }}>
                           {workoutSummary.volume >= 1000
                             ? `${(workoutSummary.volume / 1000).toFixed(1)}k`
                             : workoutSummary.volume}
@@ -1622,7 +1622,7 @@ export default function WorkoutTracker() {
                     )}
                     {workoutSummary.durationMin > 0 && (
                       <div style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: "#4ade80" }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "#fb923c" }}>
                           {workoutSummary.durationMin}m
                         </div>
                         <div style={{ fontSize: 9, letterSpacing: 2, color: "#555570" }}>DURATION</div>
